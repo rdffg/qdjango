@@ -79,7 +79,15 @@ void QDjangoModel::setForeignKey(const char *name, QObject *value)
 bool QDjangoModel::remove()
 {
     const QDjangoMetaModel metaModel = QDjango::metaModel(metaObject()->className());
-    return metaModel.remove(this);
+    try
+    {
+        return metaModel.remove(this);
+    }
+    catch (const QSqlError &e)
+    {
+        m_lastError = e;
+        return false;
+    }
 }
 
 /** Saves the QDjangoModel to the database.
@@ -88,8 +96,19 @@ bool QDjangoModel::remove()
  */
 bool QDjangoModel::save()
 {
+    bool success = false;
     const QDjangoMetaModel metaModel = QDjango::metaModel(metaObject()->className());
-    return metaModel.save(this);
+    m_lastError = QSqlError(QDjango::database().driverName(), "", QSqlError::NoError, 0);
+    try
+    {
+        success = metaModel.save(this);
+    }
+    catch (const QSqlError &e)
+    {
+        m_lastError = e;
+    }
+
+    return success;
 }
 
 /** Returns a string representation of the model instance.
@@ -99,5 +118,10 @@ QString QDjangoModel::toString() const
     const QDjangoMetaModel metaModel = QDjango::metaModel(metaObject()->className());
     const QByteArray pkName = metaModel.primaryKey();
     return QString::fromLatin1("%1(%2=%3)").arg(QString::fromLatin1(metaObject()->className()), QString::fromLatin1(pkName), property(pkName).toString());
+}
+
+QSqlError QDjangoModel::lastError() const
+{
+    return m_lastError;
 }
 

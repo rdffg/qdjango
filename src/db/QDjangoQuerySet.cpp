@@ -256,13 +256,17 @@ bool QDjangoQuerySetPrivate::sqlDelete()
     // execute query
     QDjangoQuery query(deleteQuery());
     if (!query.exec())
+    {
+        m_lastError = query.lastError();
         return false;
+    }
 
     // invalidate cache
     if (hasResults) {
         properties.clear();
         hasResults = false;
     }
+    m_lastError = query.lastError();
     return true;
 }
 
@@ -274,7 +278,10 @@ bool QDjangoQuerySetPrivate::sqlFetch()
     // execute query
     QDjangoQuery query(selectQuery());
     if (!query.exec())
+    {
+        m_lastError = query.lastError();
         return false;
+    }
 
     // store results
     while (query.next()) {
@@ -284,6 +291,7 @@ bool QDjangoQuerySetPrivate::sqlFetch()
             props << query.value(i);
         properties.append(props);
     }
+    m_lastError = query.lastError();
     hasResults = true;
     return true;
 }
@@ -293,7 +301,10 @@ bool QDjangoQuerySetPrivate::sqlInsert(const QVariantMap &fields, QVariant *inse
     // execute query
     QDjangoQuery query(insertQuery(fields));
     if (!query.exec())
+    {
+        m_lastError = query.lastError();
         return false;
+    }
 
     // fetch autoincrement pk
     if (insertId) {
@@ -319,6 +330,7 @@ bool QDjangoQuerySetPrivate::sqlInsert(const QVariantMap &fields, QVariant *inse
         hasResults = false;
     }
 
+    m_lastError = query.lastError();
     return true;
 }
 
@@ -473,6 +485,11 @@ QDjangoQuery QDjangoQuerySetPrivate::updateQuery(const QVariantMap &fields) cons
     return query;
 }
 
+QSqlError QDjangoQuerySetPrivate::lastError() const
+{
+    return m_lastError;
+}
+
 int QDjangoQuerySetPrivate::sqlUpdate(const QVariantMap &fields)
 {
     // UPDATE on an empty queryset doesn't need a query
@@ -488,7 +505,10 @@ int QDjangoQuerySetPrivate::sqlUpdate(const QVariantMap &fields)
     // execute query
     QDjangoQuery query(updateQuery(fields));
     if (!query.exec())
+    {
+        m_lastError = query.lastError();
         return -1;
+    }
 
     // invalidate cache
     if (hasResults) {
@@ -496,6 +516,7 @@ int QDjangoQuerySetPrivate::sqlUpdate(const QVariantMap &fields)
         hasResults = false;
     }
 
+    m_lastError = query.lastError();
     return query.numRowsAffected();
 }
 

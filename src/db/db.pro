@@ -30,3 +30,9 @@ SOURCES += \
 include(../src.pri)
 headers.path = $$PREFIX/include/qdjango/db
 QMAKE_PKGCONFIG_INCDIR = $$headers.path
+
+CONFIG += debug_and_release
+
+CONFIG(debug, debug|release) {
+    win32: TARGET = $$join(TARGET,,,d)
+}

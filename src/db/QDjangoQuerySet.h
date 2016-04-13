@@ -263,6 +263,7 @@ public:
          */
         difference_type operator-(const const_iterator &other) const { return m_offset - other.m_offset; }
 
+
     private:
         const T *t() const
         {
@@ -274,6 +275,7 @@ public:
 
             return m_fetched == m_offset ? &m_object : 0;
         }
+
 
     private:
         const QDjangoQuerySet<T> *m_querySet;
@@ -318,8 +320,12 @@ public:
 
     QDjangoQuerySet<T> &operator=(const QDjangoQuerySet<T> &other);
 
+    QSqlError lastError() const;
+
 private:
     QDjangoQuerySetPrivate *d;
+    QSqlError m_lastError;
+    void resetError();
 };
 
 /** Constructs a new queryset.
@@ -350,6 +356,22 @@ QDjangoQuerySet<T>::~QDjangoQuerySet()
         delete d;
 }
 
+/** Set the last sql error value to no error
+ */
+template <class T>
+void QDjangoQuerySet<T>::resetError()
+{
+    m_lastError = QSqlError(QDjango::database().driverName(), "", QSqlError::NoError);
+}
+
+/* Return the SQL error reported
+ */
+template <class T>
+QSqlError QDjangoQuerySet<T>::lastError() const
+{
+    return m_lastError;
+}
+
 /** Returns the object in the QDjangoQuerySet at the given index.
  *
  *  Returns 0 if the index is out of bounds.
@@ -366,10 +388,12 @@ T *QDjangoQuerySet<T>::at(int index, T *target)
     T *entry = target ? target : new T;
     if (!d->sqlLoad(entry, index))
     {
+        m_lastError = d->lastError();
         if (!target)
             delete entry;
         return 0;
     }
+    resetError();
     return entry;
 }
 
@@ -447,7 +471,9 @@ int QDjangoQuerySet<T>::count() const
     // execute COUNT query
     QDjangoQuery query(d->countQuery());
     if (!query.exec() || !query.next())
+    {
         return -1;
+    }
     return query.value(0).toInt();
 }
 
@@ -571,7 +597,10 @@ QDjangoQuerySet<T> QDjangoQuerySet<T>::orderBy(const QStringList &keys) const
 template <class T>
 bool QDjangoQuerySet<T>::remove()
 {
-    return d->sqlDelete();
+    resetError();
+    bool success = d->sqlDelete();
+    m_lastError = d->lastError();
+    return success;
 }
 
 /** Returns a QDjangoQuerySet that will automatically "follow" foreign-key
@@ -596,7 +625,11 @@ template <class T>
 int QDjangoQuerySet<T>::size()
 {
     if (!d->sqlFetch())
+    {
+        m_lastError = d->lastError();
         return -1;
+    }
+    resetError();
     return d->properties.size();
 }
 
@@ -606,7 +639,9 @@ int QDjangoQuerySet<T>::size()
 template <class T>
 int QDjangoQuerySet<T>::update(const QVariantMap &fields)
 {
-    return d->sqlUpdate(fields);
+    int result = d->sqlUpdate(fields);
+    m_lastError = d->lastError();
+    return result;
 }
 
 /** Returns a list of property hashes for the current QDjangoQuerySet.
@@ -617,7 +652,9 @@ int QDjangoQuerySet<T>::update(const QVariantMap &fields)
 template <class T>
 QList<QVariantMap> QDjangoQuerySet<T>::values(const QStringList &fields)
 {
-    return d->sqlValues(fields);
+    QList<QVariantMap> values = d->sqlValues(fields);
+    m_lastError = d->lastError();
+    return values;
 }
 
 /** Returns a list of property lists for the current QDjangoQuerySet.
@@ -629,7 +666,9 @@ QList<QVariantMap> QDjangoQuerySet<T>::values(const QStringList &fields)
 template <class T>
 QList<QVariantList> QDjangoQuerySet<T>::valuesList(const QStringList &fields)
 {
-    return d->sqlValuesList(fields);
+    QList<QVariantList> values = d->sqlValuesList(fields);
+    m_lastError = d->lastError();
+    return values;
 }
 
 /** Returns the QDjangoWhere expressing the WHERE clause of the

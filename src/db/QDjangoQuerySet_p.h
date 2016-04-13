@@ -110,11 +110,13 @@ public:
     QStringList orderBy;
     QList<QVariantList> properties;
     bool selectRelated;
+    QSqlError lastError() const;
 
 private:
     Q_DISABLE_COPY(QDjangoQuerySetPrivate)
 
     QByteArray m_modelName;
+    QSqlError m_lastError;
 
     friend class QDjangoMetaModel;
 };

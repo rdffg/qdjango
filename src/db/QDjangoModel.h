@@ -91,10 +91,14 @@ public slots:
     bool remove();
     bool save();
     QString toString() const;
+    QSqlError lastError() const;
 
 protected:
     QObject *foreignKey(const char *name) const;
     void setForeignKey(const char *name, QObject *value);
+
+private:
+    QSqlError m_lastError;
 };
 
 #endif

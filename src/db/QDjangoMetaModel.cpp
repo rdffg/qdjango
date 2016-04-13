@@ -330,13 +330,23 @@ QDjangoMetaModel::QDjangoMetaModel(const QMetaObject *meta)
             const QByteArray fkName = meta->property(i).name();
             const QByteArray fkModel = typeName.left(typeName.size() - 1).toLatin1();
             d->foreignFields.insert(fkName, fkModel);
-
             QDjangoMetaField field;
             field.d->name = fkName + "_id";
             // FIXME : the key is not necessarily an INTEGER field, we should
             // probably perform a lookup on the foreign model, but are we sure
             // it is already registered?
-            field.d->type = QVariant::Int;
+            // If not already registered, assume an INTEGER field. Maybe this
+            // should be logged somewhere.
+
+            if (QDjango::metaModel(fkModel).isValid())
+            {
+                QDjangoMetaModel fkMetaModel = QDjango::metaModel(fkModel);
+                field.d->type = fkMetaModel.localField(fkMetaModel.primaryKey()).d->type;
+            }
+            else
+            {
+                field.d->type = QVariant::Int;
+            }
             field.d->foreignModel = fkModel;
             field.d->db_column = dbColumnOption.isEmpty() ? QString::fromLatin1(field.d->name) : dbColumnOption;
             field.d->index = true;
@@ -798,7 +808,10 @@ bool QDjangoMetaModel::remove(QObject *model) const
     const QVariant pk = model->property(d->primaryKey);
     QDjangoQuerySetPrivate qs(model->metaObject()->className());
     qs.addFilter(QDjangoWhere(QLatin1String("pk"), QDjangoWhere::Equals, pk));
-    return qs.sqlDelete();
+    if (qs.sqlDelete())
+        return true;
+    else
+        throw qs.lastError();
 }
 
 /*!
@@ -833,7 +846,11 @@ bool QDjangoMetaModel::save(QObject *model) const
             // perform UPDATE
             QDjangoQuerySetPrivate qs(model->metaObject()->className());
             qs.addFilter(QDjangoWhere(QLatin1String("pk"), QDjangoWhere::Equals, pk));
-            return qs.sqlUpdate(fields) != -1;
+            int rows = qs.sqlUpdate(fields);
+            if (rows != -1)
+                return true;
+            else
+                throw qs.lastError();
         }
     }
 
@@ -852,12 +869,11 @@ bool QDjangoMetaModel::save(QObject *model) const
         // fetch autoincrement pk
         QVariant insertId;
         if (!qs.sqlInsert(fields, &insertId))
-            return false;
+            throw qs.lastError();
         model->setProperty(d->primaryKey, insertId);
     } else {
         if (!qs.sqlInsert(fields))
-            return false;
+            throw qs.lastError();
     }
     return true;
 }
-
