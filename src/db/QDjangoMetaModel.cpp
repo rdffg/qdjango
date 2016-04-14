@@ -345,6 +345,8 @@ QDjangoMetaModel::QDjangoMetaModel(const QMetaObject *meta)
             }
             else
             {
+                qWarning() << "Defaulting foreign key type for " << d->className
+                           << "(" << fkName << ") to INTEGER";
                 field.d->type = QVariant::Int;
             }
             field.d->foreignModel = fkModel;
