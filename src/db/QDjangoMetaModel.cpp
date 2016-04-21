@@ -342,6 +342,7 @@ QDjangoMetaModel::QDjangoMetaModel(const QMetaObject *meta)
             {
                 QDjangoMetaModel fkMetaModel = QDjango::metaModel(fkModel);
                 field.d->type = fkMetaModel.localField(fkMetaModel.primaryKey()).d->type;
+                field.d->maxLength = fkMetaModel.localField(fkMetaModel.primaryKey()).d->maxLength;
             }
             else
             {
