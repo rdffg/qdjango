@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (C) 2010-2015 Jeremy Lainé
  * Contact: https://github.com/jlaine/qdjango
  *
@@ -29,6 +29,12 @@
  *  and declare the database fields as properties using the Q_PROPERTY
  *  macro. You must then register the class with QDjango using
  *  QDjango::registerModel().
+ *
+ *  Note that Q_PROPERTY can't infer any enclosing namespace, so
+ *  namespaced types have to be fully qualified.
+ *
+ *  Foreign key objects should be created in the constructor, otherwise
+ *  QDjango won't properly load related properties.
  *
  *  You can provide options for the model using the Q_CLASSINFO macro as
  *  follows:
